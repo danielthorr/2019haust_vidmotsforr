@@ -1,0 +1,42 @@
+<svg width="400px" height="300px" >
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="40%">
+      <stop offset="45%" stop-color="yellow" />
+      <stop offset="60%" stop-color="white" stop-opacity="0.9"/>
+      <stop offset="85%" stop-color="yellow" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="black" />
+  <g>
+    <polygon fill="url(#grad1)" stroke="black" stroke-width="2px" points="200,0 100,150 300,150" />
+    <polygon fill="url(#grad1)" stroke="black" stroke-width="2px" points="100,150 0,300 200,300" />
+    <polygon fill="yellow" stroke="black" stroke-width="2px" points="300,150 200,300 400,300" />
+  </g>
+</svg>
+
+<svg width="400" height="400">
+    <rect width="100%" height="100%" fill="lightgray" stroke-width="2px" stroke="black"/>
+    <defs>
+      <path id="cross" fill="none" stroke="#333333" stroke-width="3" d="M10,10 l20,20 M10,20 L20,30 M10,30 L25,15" />
+      <path id="bez1" d="M 10 10 C 20 15, 40 15, 50 10 C 50 30, 10 30, 10 10" stroke="black" fill="transparent"/>
+      <path id="bez2" d="M 10 10 C 20 20, 40 20, 50 10 S 80 0, 90 10" stroke="black" fill="transparent"/>
+      <path id="quad1" d="M 10, 10 Q 35 40, 70 10" stroke="black" fill="none"/>
+      <path id="quad2" d="M 10, 10 Q 35 40, 70 10 T 140 10" stroke="black" fill="none"/>
+      <path id="ell1" fill="none" stroke="#333333" stroke-width="3" d="M 40 10 a40,15 0 1,0 10,0" />
+    </defs>
+    <use href="#bez1" y="60"/>
+    <use href="#bez2" y="80"/>
+    <use href="#quad1" y="100" />
+    <use href="#quad2" y="120" />
+    <use href="#ell1" y="150" />
+    <use href="#cross" x="0"/>
+    <use href="#cross" x="20"/>
+    <use href="#cross" x="40"/>
+    <use href="#cross" x="60"/>
+    <use href="#cross" x="0" y="20"/>
+    <use href="#cross" x="20" y="20"/>
+    <use href="#cross" x="40" y="20"/>
+    <use href="#cross" x="60" y="20"/>
+  </svg>
+  
+  <p id="m"></p>
