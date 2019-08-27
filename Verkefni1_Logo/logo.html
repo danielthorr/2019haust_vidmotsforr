@@ -1,0 +1,29 @@
+<svg width="400" height="400"
+     viewbox="0 0 100% 100%" >
+  <rect width="100%" height="100%" fill="lightgray" />
+  
+  <defs>
+    <g id="arrowFeather">
+      <polygon  points="330,197 337,180 350,180 343,197" fill="black"/>
+      <line x1="343" y1="180" x2="341" y2="185" stroke="white" stroke-width="1"/>
+      <line x1="346" y1="180" x2="342.5" y2="189" stroke="white" stroke-width="1"/>
+    </g>
+  </defs>
+  <use href="#arrowFeather" x="5"/>
+  <use href="#arrowFeather" x="-10"/>
+  <use href="#arrowFeather" x="5" transform="scale(2)" />
+  
+  <g id="arrow">
+    
+    <line id="arrowShaft" x1="50" y1="200" x2="350", y2="200" stroke="black" stroke-width="3" stroke-linecap="butt"/>
+    
+    <path id="arrowHead" stroke="black" fill="white" 
+        d="M10 200, C30 200, 40 180, 50 180, 
+           C65 180, 65 200, 50 200,
+           C65 200, 65 220, 50 220,
+           C40 220, 30 200, 10 200"
+        />
+    
+    
+  </g>
+</svg>

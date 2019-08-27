@@ -1,0 +1,6 @@
+body { width: 50%; height: 50%; }
+svg
+{
+  margin: 40% 50%;
+  transform: scale(2);
+}
