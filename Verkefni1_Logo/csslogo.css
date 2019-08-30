@@ -1,6 +1,6 @@
-body { width: 50%; height: 50%; }
+body { width: 100vw; height: 100vh; margin: 0; padding:0;}
 svg
 {
-  margin: 40% 50%;
-  transform: scale(2);
+	width: 100%;
+	height: 100%;
 }
