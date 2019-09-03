@@ -1,0 +1,63 @@
+<html>
+<head>
+	<link rel="stylesheet" href="csslogo.css" />
+</head>
+<body>
+<svg width="100%" height="400px"
+     viewbox="0 0 400 400"
+preserveAspectRatio="xMinYMin meet"	 >
+  <!--rect width="100%" height="100%" fill="lightgray" /-->
+  
+  <defs>
+
+    <!--linearGradient id="grad1" x1="0" y1="0" x2="0.5" y2="1">
+      <stop stop-color="brown" offset="40%" />
+      <stop stop-color="white" offset="50%" />
+      <stop stop-color="brown" offset="60%" />
+    </linearGradient-->
+    <radialGradient id="wood" cx="0.5" cy="0.5" r="0.3" spreadMethod="reflect">
+      <stop stop-color="saddlebrown" offset="0%" />
+      <stop stop-color="peru" offset="50%" />
+      <stop stop-color="sienna" offset="100%" />
+    </radialGradient>
+
+
+    <g id="arrowFeather">
+      <polygon  points="0,17 7,0 20,0 13,17" fill="black"/>
+      <line x1="13" y1="0" x2="11" y2="5" stroke="white" stroke-width="1"/>
+      <line x1="16" y1="0" x2="12.5" y2="9" stroke="white" stroke-width="1"/>
+    </g>
+  </defs>
+  <rect x="230" y="0" width="150" height="150" fill="url(#grad1)" stroke="black" />
+  
+  <!-- Here is the grouping for arrow - components: head (path), shaft (line) and feathers (combined, see def above) -->
+  <g id="arrow" transform="rotate(45) translate(70, -160) scale(0.8)">
+    <g transform="translate(320, 180)">
+      <use xlink:href="#arrowFeather"/>
+      <use xlink:href="#arrowFeather" x="15" />
+      <use xlink:href="#arrowFeather" y="-40" x="15" transform="scale(1,-1)"/>
+      <use xlink:href="#arrowFeather" y="-40" x="0" transform="scale(1,-1)"/>
+    </g>
+    
+    <line id="arrowShaft" x1="50" y1="200" x2="350", y2="200" stroke="black" stroke-width="3" stroke-linecap="butt"/>
+    
+    <path id="arrowHead" stroke="black" fill="white" 
+        d="M10 200, C30 200, 40 180, 50 180,  C65 180, 65 200, 50 200,
+           C65 200, 65 220, 50 220, C40 220, 30 200, 10 200"
+        />
+  </g>
+  
+  <g id="bow" transform="translate(70, 0)">
+    <path id="bowString" stroke="brown" stroke-width="2" fill="none"
+          d="M100 10, Q114 12, 112 35, L112 325, Q112 338, 100 340"/>
+    <path id="bowTop" stroke="url(#wood)" stroke-linecap="round" stroke-width="4" fill="none" 
+          d="M10 155, C10 75, 100 70, 110 40, C115 25, 110 10, 100 10" />
+    <path id="bowBottom" stroke="url(#wood)" stroke-linecap="round" stroke-width="4" fill="none" 
+          d="M10 195, C10 275, 100 280, 110 310, C115 325, 110 340, 100 340" />
+    <path id="bowMiddle" stroke="green" stroke-linecap="round" stroke-width="5" fill="none"
+          d="M10 155, C10 175, 10 175, 10 195" />
+  </g>
+  
+</svg>
+</body>
+</html>
