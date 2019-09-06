@@ -21,6 +21,9 @@ function svgPoints(id) {
 }
 //svgPoints("bowMiddle");
 
+
+// ------------------------------------------ \\
+
 function elById(id) {
   return document.getElementById(id);
 }
@@ -30,10 +33,22 @@ let arrowFeathers = elById("arrowFeather");
 let arrow = elById("arrow");
 let bow = elById("bow");
 let bowTop = elById("bowTop");
-let bowBottom = elById("bowBottom")
+let bowBottom = elById("bowBottom");
 let bowString = elById("bowString");
+let instructions = elById("instructions");
+
+function centerText(el) {
+  let parent = el.parentElement;
+  let pWidth = parent.getBBox().width;
+  let elWidth = el.getBBox().width;
+  return pWidth*0.5 - elWidth*0.5;
+};
+
+let bowDrawFinished = false;
 
 svg.addEventListener("mouseenter", function() {
+  instructions.innerHTML = "Now hold down your left mouse button";
+  instructions.setAttribute("textLength", "92%");
   anime.remove(arrow);
   anime({
   targets: arrow,
@@ -50,6 +65,8 @@ svg.addEventListener("mouseenter", function() {
 });
 
 svg.addEventListener("mouseleave", function() {
+  instructions.innerHTML = "Hover over me!";
+  instructions.setAttribute("textLength", "70%");
   anime.remove(arrow);
   anime({
   targets: arrow,
@@ -66,6 +83,7 @@ svg.addEventListener("mouseleave", function() {
 });
 
 svg.addEventListener("mousedown", function() {
+  bowDrawFinished = false;
   anime({
     targets: arrow,
     transform: "rotate(0) translate(-73, 10) scale(0.8)",
@@ -110,9 +128,67 @@ svg.addEventListener("mousedown", function() {
         translateX: -2,
         d: "M12 155, C10 175, 10 175, 12 195",
         easing: "cubicBezier(0.075, 0.025, 0.195, 0.985)",
-        duration: 1500
+        duration: 1500,
+        update: function(anim) {
+          instructions.innerHTML = "Drawing the bowstring: " + Math.round(anim.progress) + "%";
+          instructions.setAttribute("textLength", "92%");
+        },
+        complete: function() { bowDrawFinished = true; }
       });
     }
     }
   );
+});
+svg.addEventListener("mouseup", function() {
+  instructions.innerHTML = "Arrow fired!";
+  instructions.setAttribute("textLength", "60%");
+  anime.remove([arrow, bow, bowString, bowTop, bowBottom, bowMiddle]);
+  anime({
+    targets: bowString,
+    d: "M100 10, Q114 12, 112 35, 112 170, 112 325, Q112 338, 100 340",
+    easing: "easeInCubic",
+    duration: 60
+  });
+  anime({
+    targets: bowTop,
+    d: "M10 155, C10 75, 100 70, 110 40, C115 25, 110 10, 100 10",
+    easing: "easeInCubic",
+    duration: 60
+  });
+  anime({
+    targets: bowBottom,
+    d: "M10 195, C10 275, 100 280, 110 310, C115 325, 110 340, 100 340",
+    easing: "easeInCubic",
+    duration: 60
+  });
+  anime({
+    targets: bowMiddle,
+    translateX: 0,
+    d: "M10 155, C10 175, 10 175, 10 195",
+    easing: "easeInCubic",
+    duration: 60
+  });
+  anime({
+    targets: bow,
+    delay: 250,
+    transform: "translate(95, 0)",
+    easing: "easeInSine",
+    duration: 700
+  });
+  if (bowDrawFinished) {
+    anime({
+    targets: arrow,
+    transform: "rotate(0) translate(-300, 10) scale(0.8)",
+    easing: "easeInCubic",
+    duration: 70
+    });
+  } else {
+    instructions.innerHTML = "Now hold down your left mouse button";
+    anime({
+    targets: arrow,
+    transform: "rotate(45) translate(70, -160) scale(0.8)",
+    easing: "easeInCubic",
+    duration: 60
+    });
+  }
 });
