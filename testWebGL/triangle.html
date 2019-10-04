@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+
+    <canvas id="glCanvas" style="width:100vw; height:100vh;"></canvas>
+
+    <script src="https://mdn.github.io/webgl-examples/tutorial/gl-matrix.js"></script>
+    <script>
+    const canvas = document.getElementById("glCanvas");
+    const gl = canvas.getContext("webgl");
+    if (gl === null) {
+        alert("Unable to init webgl at start");
+    }
+    </script>
+    <script src="webGLProgram.js"></script>
+</body>
+</html>
