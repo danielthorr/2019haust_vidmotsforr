@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    body { margin: 0; padding: 0; overflow:hidden;}
+    canvas { margin: 0; padding: 0; width: 100vw; height: 100vh;}
+  </style>
+</head>
+<body>
+  
+  <!-- búum til canvas element til þess að teikna í -->
+  <canvas id="c"></canvas>
+
+  <script>
+    // Við byrjum á því að ná í canvas og webgl context og geymum það í breytum
+    let canvas = document.getElementById("c");
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    let gl = canvas.getContext("webgl2");
+    if (!gl) {
+        // no webl2 for you
+    }
+
+    let aspectRatio = canvas.width/canvas.height;
+    let currentRotation = [0, 1];
+    let currentScale = [1.0, aspectRatio];
+
+    // Animation timing
+    let previousTime = 0.0;
+    let degreesPerSecond = 90.0;
+
+    // við þurfum að skilgreina "source" kóðan fyrir bæði vertex shader og fragment shader
+    // hann er skrifaður á GLSL tungumáli sem OpenGL skilur og þarf til þess að virka.
+
+    // Vertex shader-inn sér um að staðsetja "punktana" á myndinni
+    let vertexShaderSource = 
+      `#version 300 es
+      // Við byrjum alltaf á því að skilgreina hvaða útgáfu af WebGL tungumálinu við notum 
+      
+      // Við búum til attribute breytu sem tvívíðan vector þar sem við erum
+      // bara að fara að teikna í 2d. Við skilgreinum attribute qualifier með "in".
+      // Attribute er qualifier sem segir hvernig breytan á að vera. Breytur með 
+      // attribute qualifier eru global innan OpenGL sem aðeins vertex shaders geta notað.
+      // Attributes breytur fá gögn úr "buffers" sem þau gefa síðan vertex shader-inum 
+      in vec2 a_position;
+
+      // Uniform qualifiers segja í raun að þetta sé global breyta
+      // Búum til uniform breytur til þess að hjálpa okkur með að snúa þríhyrninginum
+      uniform vec2 uScalingFactor;
+      uniform vec2 uRotationVector;
+
+      // Allir shader-ar þurfa main function
+      void main() {
+        // Reiknum út staðsetningu meðan hann snýst 
+        // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Basic_2D_animation_example
+        vec2 rotatedPosition = vec2(
+          a_position.x * uRotationVector.y + a_position.y * uRotationVector.x,
+          a_position.y * uRotationVector.y - a_position.x * uRotationVector.x
+        );
+        // gl_Position er sérstök breyta sem vertex shaderinn verður að setja
+        // Við margföldum með uScalingFactor til þess að vera viss um að fá útkomuna í clipspace coordinates
+        gl_Position = vec4(rotatedPosition * uScalingFactor, 0.0, 1.0);
+      }`;
+
+    // Fragment shader-inn sér um að teikna á milli punktanna og vinna með liti
+    let fragmentShaderSource = 
+      `#version 300 es
+
+      // Fragment shader-ar hafa ekkert default precision. Precision þýðir í raun bara
+      // hversu nákvæmlega shader-inn á að geyma float tölur. Mediump er góður millivegur
+      precision mediump float;
+
+      // Varying er qualifier eins og attribute. Við skilgreinum varying breytur með "out".
+      // Varying breytur eru notaðar fyrir "interpolated data", þ.e.a.s. tölur sem færast
+      // frá einu gildi yfir í annað.
+      // Við notum vec4 sem er einfaldlega vector með 4 gildi fyrir RGBA
+      out vec4 outColor;
+
+      void main() {
+        // Búum bara til einhvern lit til þess að prufukeyra forritið
+        outColor = vec4(0.4, 0.55, 0.45, 1);
+      }`;
+
+    // Næstu tvö föll ættu að segja sig að mestu sjálft út frá nöfnunum en ég 
+    // ætla að renna hratt yfir það sem er þau gera.
+
+    // Hér erum við að búa til shader
+    function createShader(gl, type, source) {
+        // Við búum til shader af þeirri týpu sem við þurfum (vertex eða fragment)
+        let shader = gl.createShader(type);
+        // Síðan gefum við þeim "source" kóðan hér fyrir ofan og compile-um shader-inn
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+
+        // Ef allt heppnaðist skilum við shader-inum til baka. Ef ekki sendum við erro
+        // í console.log og eyðum shader-inum sem heppnaðist ekki
+        let success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+        
+        if (success) { return shader; }
+
+        console.log(gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+    }
+
+    // Hér búum við til program. 
+    // Þegar vertex og fragment shader-ar eru bundnir saman kallast þeir program.
+    function createProgram(gl, vertexShader, fragmentShader) {
+        // Búum fyrst til program og bindum svo shader-ana við program-ið
+        let program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+
+        let success = gl.getProgramParameter(program, gl.LINK_STATUS);
+
+        if (success) { return program; }
+
+        console.log(gl.getProgramInfoLog(program));
+        gl.deleteProgram(program);
+    }
+
+    // Búum til vertex shader og fragment shader og bindum þá saman í program
+    let vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+    let fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+    let program = createProgram(gl, vertexShader, fragmentShader);
+
+    // Við náum í staðsetninguna (í minninu?) á attribute breytunni "a_position" og geymum það
+    let positionAttributeLocation = gl.getAttribLocation(program, "a_position");
+
+    // Attributes breytur fá gögnin sín frá buffer þannig að við búum til buffer
+    let positionBuffer = gl.createBuffer();
+
+    // Við bindum buffer-inn sem við bjuggum til við ARRAY_BUFFER breytuna.
+    // ARRAY_BUFFER er global breyta í WebGL og er svokallaður bind point. 
+    // Við getum ekki breytt WebGLBuffer beint þannig að við þurfum að binda það við bind point
+    // og notum svo þann bind point til þess að vinna með buffer-inn.
+    // Bind points í WebGL eru global breytur sem við getum notað með ýmsum WebGL components.
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+    // Við skilgreinum punkta (vertices) sem við munum svo láta buffer-inn fá
+    let positions = [
+      -0.25, -0.5,
+      0.25, -0.5,
+      0, 0.5
+    ];
+
+    // við notum gl.bufferData til þess að uppfæra buffer-inn með positions fylkinu
+    // hér notum við gl.ARRAY_BUFFER til þess að benda á buffer-inn og við þurfum að búa til
+    // nýtt fylki með 32 bita float tölum vegna þess að það er það sem WebGL notar.
+    // gl.STATIC_DRAW þýðir að við erum ekki að fara að breyta gögnunum í buffer-inum mikið.
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+    // Vertex Array Object (VAO) inniheldur attribute breytu, hvaða buffer hún á að nota og 
+    // hvernig gögnin verða notuð. Hér erum við að búa til VAO og geymum það í breytu
+    let vao = gl.createVertexArray();
+
+    // Bindum saman buffer-inn og VAO
+    gl.bindVertexArray(vao);
+
+    // Now we can setup the attribute in the vertex array. First we turn the attribute on.
+    // This tells WebGL we want to get data out of a buffer. If we don't do this 
+    // the attribute will have a constant value
+    // Við þurfum að "kveikja á" attribute breytunni og til þess að gera það köllum við á fall
+    // sem tekur inn staðsetninguna á attribute breytunni sem við náðum í hér að ofan.
+    gl.enableVertexAttribArray(positionAttributeLocation);
+
+    // Við þurfum að skilgreina hvernig attribute breytan á að koma fram 
+    // við gögnin frá buffer-inum 
+    let size = 2;           // tökum 2 components fyrir hverja umferð
+    let type = gl.FLOAT;    // gögnin sem við notum eru 32 bita float tölur
+    let normalize = false;  // normalize þýðir það að vigrinn bendir í sömu átt en með lengdina 1
+    let stride = 0;         // 0 = fyrir hverja umferð hoppum við áfram size * sizeof(type) (í minninu?)
+    let offset = 0;         // byrjum strax á fyrsta byte-inu í VAO.
+    // bindum buffer-inn í ARRAY_BUFFER breytunni við VAO og skilgreinum gagnavinnsluna
+    gl.vertexAttribPointer(
+        positionAttributeLocation,
+        size,
+        type,
+        normalize,
+        stride,
+        offset
+    );
+
+    // Þegar við köllum á fallið gl.vertexAttribPointer bindir það ARRAY_BUFFER buffer-inn
+    // við VAO. Það þýðir að við getum notað ARRAY_BUFFER fyrir annan buffer og VAO object-ið
+    // sem við bjuggum til mun halda áfram að nota buffer-inn sem við vorum búin að binda hann við.
+
+    // Segjum WebGL hvaða program við viljum nota
+    gl.useProgram(program);
+
+    // Áður en við látum WebGL "teikna" fyrir okkur þurfum við að skilgreina nokkra hluti
+    let primitiveType = gl.TRIANGLES; // mode: hvað við viljum teikna. T.d. TRIANGLE, LINE o.s.fr. 
+    let offsetr = 0;                  // first: hvar við ætlum að byrja
+    let count = 3;                    // count: hversu margar umferðir við þurfum að fara
+    gl.drawArrays(primitiveType, offsetr, count);
+  </script>
+</body>
+</html>

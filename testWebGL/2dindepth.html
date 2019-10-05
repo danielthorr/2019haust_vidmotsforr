@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Page Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {margin: 0; padding: 0;}
+        canvas {margin:0; padding:0; width:100vw; height:100vh;}
+    </style>
+</head>
+<body>
+
+    <canvas id="c"></canvas>
+
+    <script src="https://webgl2fundamentals.org/webgl/resources/webgl-utils.js">
+        // we use this to help us with some calculations, nothing major and nothing
+        // that couldn't be done manually
+    </script>
+
+    <script>
+        "use strict";
+        //Following: https://webgl2fundamentals.org/webgl/lessons/webgl-fundamentals.html
+
+        /* 
+        Gonna define a few of the concepts first: 
+        
+        Vertex shader:
+            Provides the clipspace coordinates (always goes from -1 to 1. 0 is in the middle)
+        Fragment shader:
+            Provides the color
+            
+        Together they are called a program
+
+        Buffers:
+            are arrays of binary data you upload to the GPU. Usually stuff like positions, normals, texture coords and so on but you can put anything in them
+        Attributes/in:
+            they are used to specify how to pull data out of buffers and provide them to the vertex shader.
+            Simplified example: You put positions in buffer, then tell an attribute which buffer to pull the positions out of, what type of data it is, what the offset is and how many bytes
+            
+            The state of attributes, what buffer to use and how to pull the data is collected into a vertex array object (VAO)
+        Uniforms:
+            Essentially global variables you set before executing the shader program.
+        Textures:
+            Array of data you can access in the shader program, it's usually an image but it can just as easily contain something other than colors.
+        Varyings/out:
+            Varyings are a way for vertex shaders to pass data to a fragment shader. Depending on what is being rendered (points, line or triangles) the values will be interpolated while executing the fragment shader.
+    
+        */
+        let canvas = document.getElementById("c");
+
+        let gl = canvas.getContext("webgl2");
+        if (!gl) {
+            // no webl2 for you
+        }
+        
+        let vertexShaderSource = 
+            `#version 300 es
+            
+            // an attribute is an input (in) to a vertex shader.
+            // It will receive data from a buffer
+            in vec2 a_position;
+
+            // Used to pass in the resolution of the canvas
+            uniform vec2 u_resolution;
+
+            //all shaders have a main function
+            void main() {
+                // Convert the position from pixels to 0.0 to 1.0
+                vec2 zeroToOne = a_position / u_resolution;
+
+                // Convert from 0->1 to 0->2
+                vec2 zeroToTwo = zeroToOne * 2.0;
+
+                // Convert from 0->2 to -1->+1 (clipspace)
+                vec2 clipSpace = zeroToTwo - 1.0;
+
+                // gl_Position is a special variable a vertex shader
+                // is responsible for setting
+                gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+            }`;
+
+        let fragmentShaderSource = 
+            `#version 300 es
+
+            // fragment shaders don't have a default precision so we need to pick one.
+            // mediump is a good default. It means "medium precision"
+            precision mediump float;
+
+            uniform vec4 u_color;
+
+            // we need to declare an output for the fragment shader
+            out vec4 outColor;
+
+            void main() {
+                outColor = u_color;;
+            }`;
+
+        // These next two functions should be self explanatory by their function names
+        function createShader(gl, type, source) {
+            let shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            let success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+            
+            if (success) { return shader; }
+
+            console.log(gl.getShaderInfoLog(shader));
+            gl.deleteShader(shader);
+        }
+        function createProgram(gl, vertexShader, fragmentShader) {
+            let program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            let success = gl.getProgramParameter(program, gl.LINK_STATUS);
+
+            if (success) { return program; }
+
+            console.log(gl.getProgramInfoLog(program));
+            gl.deleteProgram(program);
+        }
+
+        // We create the shaders and then merge them in a program
+        let vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        let fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+        let program = createProgram(gl, vertexShader, fragmentShader);
+
+        // We need to set the u_resolution and to do that we need to look up its location
+        let resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
+        // Same with the color uniform
+        let colorLocation = gl.getUniformLocation(program, "u_color");
+
+        // We look up the position of the attribute of our program
+        // Looking up attribute (and uniform) locations is something you should do during
+        // initialization, not in your render loop
+        let positionAttributeLocation = gl.getAttribLocation(program, "a_position");
+
+        // Attributes get their data from buffers so we need to create a buffer
+        let positionBuffer = gl.createBuffer();
+
+        // We can manipulate many WebGL resources on global bind points. You can think of bind points
+        // as internal global variables inside WebGL. 
+        // First you bind a resource to a bind point, then all other functions refer to the resource
+        // through the bind point. So let's bind the position buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+        // Now we can put data in the buffer by referencing it through the bind point
+        // three 2d points
+        let positions = [
+            100, 200,
+            800, 200,
+            100, 600,
+            100, 600,
+            800, 600,
+            800, 200
+        ];
+        // We use gl.ARRAY_BUFFER because that's what we bound to the buffer in the code above
+        // We create an 32 bit float array with our positions because that's what WebGL works with
+        // gl.STATIC_DRAW gives WeblGL a hint on how we'll use the data. STATIC_DRAW means we're 
+            // unlikely to be changing the data much
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+        // Now we've put data in the buffer but we haven't told the attribute how to
+        // get the data out of it. First we create a collection of attribute state called a Vertex Array Object
+        let vao = gl.createVertexArray();
+
+        // And to make all of our attribute settings apply to that set of attribute state
+        // we make the current vertex array the array we just defined.
+        gl.bindVertexArray(vao);
+
+        // Now we can setup the attribute in the vertex array. First we turn the attribute on.
+        // This tells WebGL we want to get data out of a buffer. If we don't do this 
+        // the attribute will have a constant value
+        gl.enableVertexAttribArray(positionAttributeLocation);
+
+        // Then we specify how to pull the data out
+        let size = 2;           // 2 components per iteration
+        let type = gl.FLOAT;    // the data is 32 bit floats
+        let normalize = false;  // don't normalize the data
+        let stride = 0;         // 0 = move forward size * sizeof(type) each iteration
+        let offset = 0;         // start at the beginning of the buffer
+        gl.vertexAttribPointer(
+            positionAttributeLocation,
+            size,
+            type,
+            normalize,
+            stride,
+            offset
+        );
+
+        // A hidden part of gl.vertexAttribPointer is that it binds the current ARRAY_BUFFER to the attribute.
+        // This means that this attribute is bound to "positionBuffer" and we're now free to 
+        // bind something else to the ARRAY_BUFFER bind point. The attribute will use "positionBuffer"
+
+        // From the point of view of our GLSL vertex shader the "a_position" attribute is a "vec4"
+        // vec4 is a 4 float value. Above we set "size = 2". Attributes default to "0, 0, 0, 1"
+        // so this attribute will get its first 2 values (x and y) from our buffer.
+        // The z and w will be the default 0 and 1 respectively.
+
+        // Before we draw we should resize the canvas to match its display size. 
+        // It's best to set the size with css as it's far more flexible than any other method.
+
+        // We're gonna use a helper function to resize the canvas
+        webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+
+        // We need to tell WebGL how to convert from the clip space values. We'll 
+        // be setting gl_Position to back into pixels, often called screen space. 
+        // To do this we call gl.viewport and pass it the current size of the canvas.
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        // This tells WebGL the -1 to +1 clipspace maps to gl.canvas.width and gl.canvas.height
+
+        // Clear the canvas (to make it transparent)
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        // Next we tell WebGL which shader program to execute
+        gl.useProgram(program);
+
+        // We can now set the value for u_resolution. gl.userPogram is similar to gl.bindBuffer above
+        // in that it sets the current program. 
+        // The gl.uniformXXX functions set uniforms on the current program.
+
+        // Pass in the canvas resolution to convert from pixels to clipspace
+        gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
+        // Set the color of the color uniform
+        gl.uniform4f(colorLocation, Math.random(), Math.random(), Math.random(), 1);
+
+        // Then we tell it which set of buffers to use and how to pull the data out to supply the attributes
+        gl.bindVertexArray(vao);
+
+        // After all that we can finally ask WebGL to execute our GLSL program
+        let primitiveType = gl.TRIANGLES;
+        let offsetr = 0;
+        let count = 6;
+        gl.drawArrays(primitiveType, offsetr, count);
+
+        // Because the count is 3, our vertex shader will be executed 3 times. We have 3 vertices 
+        // so each iteration will set the a_position attribute's x and y to the vertice values.
+    </script>
+</body>
+</html>
