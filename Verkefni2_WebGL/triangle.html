@@ -13,7 +13,7 @@
   
   <!-- búum til canvas element til þess að teikna í -->
   <canvas id="c"></canvas>
-
+  <script src="https://mdn.github.io/webgl-examples/tutorial/gl-matrix.js"></script>
   <script>
     // Við byrjum á því að ná í canvas og webgl context og geymum það í breytum
     let canvas = document.getElementById("c");
@@ -23,6 +23,7 @@
     if (!gl) {
         // no webl2 for you
     }
+
 
     // við þurfum að skilgreina "source" kóðan fyrir bæði vertex shader og fragment shader
     // hann er skrifaður á GLSL tungumáli sem OpenGL skilur og þarf til þess að virka.
@@ -38,10 +39,14 @@
       // Attributes breytur fá gögn úr "buffers" sem þau gefa síðan vertex shader-inum 
       in vec4 a_position;
 
+      // Uniform qualifier eru einskonar global breytur fyrir WebGL
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uProjectionMatrix;
+
       // Allir shader-ar þurfa main function
       void main() {
         // gl_Position er sérstök breyta sem vertex shaderinn verður að setja
-        gl_Position = a_position;
+        gl_Position = uProjectionMatrix * uModelViewMatrix * a_position;
       }`;
 
     // Fragment shader-inn sér um að teikna á milli punktanna og vinna með liti
@@ -106,8 +111,10 @@
     let fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
     let program = createProgram(gl, vertexShader, fragmentShader);
 
-    // Við náum í staðsetninguna (í minninu?) á attribute breytunni "a_position" og geymum það
+    // Við náum í staðsetninguna (í minninu?) á breytunum og geymum þær
     let positionAttributeLocation = gl.getAttribLocation(program, "a_position");
+    let projectionMatrixLocation = gl.getUniformLocation(program, "uProjectionMatrix");
+    let modelViewMatrixLocation = gl.getUniformLocation(program, "uModelViewMatrix");
 
     // Attributes breytur fá gögnin sín frá buffer þannig að við búum til buffer
     let positionBuffer = gl.createBuffer();
@@ -121,9 +128,9 @@
 
     // Við skilgreinum punkta (vertices) sem við munum svo láta buffer-inn fá
     let positions = [
-      -0.25, -0.5,
-      0.25, -0.5,
-      0, 0.5
+      -1.25, -1.5,
+      1.25, -1.5,
+      0, 1.5
     ];
 
     // við notum gl.bufferData til þess að uppfæra buffer-inn með positions fylkinu
@@ -174,7 +181,69 @@
     let primitiveType = gl.TRIANGLES; // mode: hvað við viljum teikna. T.d. TRIANGLE, LINE o.s.fr. 
     let offsetr = 0;                  // first: hvar við ætlum að byrja
     let count = 3;                    // count: hversu margar umferðir við þurfum að fara
+
+    let squareRotation = 0.0;
+    
+    // Búum til fall sem teiknar út frá shader-unum okkar
+    function drawScene(deltaTime) {
+      // Búum til stillingaratriði fyrir "myndavélina"
+      const FOV = 45 * Math.PI / 180; // "Sjónsvið" myndavélarinnar
+      const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight; // Hlutföllin á fletinum sem við erum að teikna á
+      const zNear = 0.1; // Near og far segja til um hvenær hlutir hverfa úr sjón
+      const zFar = 100.0;
+      const projectionMatrix = mat4.create(); // Búum til projection matrix með hjálparaðgerðum
+
+      // Búum til sjónarhornið fyrir myndavélina
+      mat4.perspective(
+        projectionMatrix,
+        FOV,
+        aspect,
+        zNear,
+        zFar
+      );
+
+    // Búum til matrix til þess að nota fyrir modelView
+    const modelViewMatrix = mat4.create();
+
+    // Aðferð til þess að færa modelView í miðjuna á skjáinn   
+    mat4.translate(
+      modelViewMatrix,  // destination matrix
+      modelViewMatrix,  // matrix to translate
+      [-0.0, 0.0, -6.0] // amount to translate
+      );  
+
+    // Aðferð til þess að snúa modelView
+    mat4.rotate(
+      modelViewMatrix,  // Destination matrix
+      modelViewMatrix,  // Matrix to rotate
+      squareRotation,   // amount to rotate in radians
+      [0, 0, 1]         // axis to rotate around
+      );
+
+    // Gefum/uppfærum gildin fyrir uniform breyturnar
+    gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
+    gl.uniformMatrix4fv(modelViewMatrixLocation, false, modelViewMatrix);
+
+    // Teiknum myndina á skjáinn
     gl.drawArrays(primitiveType, offsetr, count);
+
+    // Snúum örlítið í hverjum ramma
+    squareRotation += deltaTime;
+    }
+
+    let then = 0;
+    function render(now) {
+      now *= 0.001; // Convert to seconds
+      // Við búum til deltaTime til þess að finna út hversu langur tími leið síðan seinasti rammi var teiknaður
+      // með því að nota deltaTime við útreikninga getum við fengum smooth hreyfingar
+      // sama hvaða framerate það er verið að sýna það með
+      const deltaTime = now - then;
+      then = now;
+
+      drawScene(deltaTime);
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
   </script>
 </body>
 </html>
