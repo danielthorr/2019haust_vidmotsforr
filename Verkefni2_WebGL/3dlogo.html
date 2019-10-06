@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {margin:0;}
+        canvas {width:100%; height:100%;}
+    </style>
+</head>
+<body>
+<script src="https://threejs.org/build/three.js"></script>
+<script>
+    let three = THREE;
+    let scene = new three.Scene();
+    let camera = new three.PerspectiveCamera( 
+        75, 
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+    );
+
+    let renderer = new three.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    let geometry = new three.BoxGeometry(1, 1, 1);
+    let material = new three.MeshBasicMaterial({color:0x00ff00});
+    let cube = new three.Mesh(geometry, material);
+    scene.add(cube);
+    
+    camera.position.z = 5;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render( scene, camera);
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+    }
+    animate();
+
+</script>
+</body>
+</html>
