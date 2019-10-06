@@ -9,47 +9,152 @@
     </style>
 </head>
 <body>
-<script src="https://threejs.org/build/three.js"></script>
+<script src="node_modules/three/build/three.min.js"></script>
+<script src="node_modules/three/examples/js/controls/OrbitControls.js"></script>
 <script>
 
     /* ****** setting up the scene, camera and renderer ****** */
     let three = THREE;
     let scene = new three.Scene();
     let camera = new three.PerspectiveCamera( 
-        75, 
+        45, 
         window.innerWidth / window.innerHeight,
         0.1,
         1000
     );
-    camera.position.z = 5;
+    camera.position.z = 25;
+    camera.position.y = 3;
     let renderer = new three.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
+    // Orbital controls
+    let controls = new three.OrbitControls(camera, renderer.domElement);
 
     /* ****** Creating the geometry ****** */
     // Setting up some materials
     let mat = {
-        matte: new three.MeshLambertMaterial({color:0xF08080}),
-        shiny: new three.MeshPhongMaterial({color:0xFFD700}),
+        matte: new three.MeshLambertMaterial({color:0xFF00FF}),
+        shiny1: new three.MeshPhongMaterial({color:0xFFD700}),
+        shiny2: new three.MeshPhongMaterial({color:0xF08080}),
         toon: new three.MeshToonMaterial({color:0x9370DB})
     };
-    let geometry = new three.BoxGeometry(1, 1, 1);
-    let material = new three.MeshLambertMaterial({color:0x00ff00});
-    let cube = new three.Mesh(material, material);
-    scene.add(cube);
+    // create a texture loader and load in our textures
+    let textureLoader = new three.TextureLoader();
+    let texture = textureLoader.load("textures/wood.jpg");
+    texture.encoding = three.sRGBEncoding;
+    texture.anisotropy = 16;
+    let ao = textureLoader.load("textures/woodambieocc.jpg");
+    let normal = textureLoader.load("textures/woodnormal.jpg");
+    let rough = textureLoader.load("textures/woodrough.jpg");
+    let floorMat = new three.MeshStandardMaterial({
+        map: texture,
+        aoMap: ao,
+        normalMap: normal,
+        roughnessMap: rough
+    });
+    texture = textureLoader.load("textures/scifi.jpg");
+    texture.repeat.set(0.7, 0.7);
+    texture.encoding = three.sRGBEncoding;
+    texture.anisotropy = 16;
+    ao = textureLoader.load("textures/scifiao.jpg");
+    metal = textureLoader.load("textures/scifimetal.jpg");
+    normal = textureLoader.load("textures/scifinormal.jpg");
+    rough = textureLoader.load("textures/scifirough.jpg");
+    //rough = textureLoader.load("textures/organic.jpg");
+    let boxMat = new three.MeshStandardMaterial({
+        map: texture,
+        aoMap: ao,
+        metalnessMap: metal,
+        normalMap: normal,
+        roughnessMap: rough
+    });
+
+    // Setting up shapes
+    function createCube(h, w, d, material) {
+        let geometry = new three.BoxGeometry(h, w, d);
+        return new three.Mesh(geometry, material);
+    }
+    function createSphere(r, w, h, material) {
+        let geometry = new three.SphereGeometry(r, w, h);
+        return new three.Mesh(geometry, material);
+    }
+    function createCone(r, h, s, material) {
+        let geometry = new three.ConeGeometry(r, h, s);
+        return new three.Mesh(geometry, material);
+    }
+    function createTorus(r, t, rs, ts, material) {
+        let geometry = new three.TorusGeometry(r, t, rs, ts);
+        return new three.Mesh(geometry, material);
+    }
+    function createPlane(w, h, ws, hs, material) {
+        let geometry = new three.PlaneGeometry(w, h, ws, hs);
+        return new three.Mesh(geometry, material);
+    }
+
+    // Creating our shapes, positioning them and adding them to the scene.
+    let matSphere = createSphere(2, 32, 32, boxMat);
+    matSphere.position.set(-3, -2, -2);
+    matSphere.rotateY(three.Math.degToRad(-20));
+    scene.add(matSphere);
+
+    let cone = createCone(3, 3, 32, mat.shiny2);
+    cone.position.set(0, 4, 0);
+    scene.add(cone);
+    let sphere = createSphere(1, 32, 32, mat.shiny1);
+    scene.add(sphere);
+    sphere.position.set(0, 2.5, 0);
+
+    let sphere2 = createSphere(1, 32, 32, mat.matte);
+    sphere2.position.set(0, -4, 0);
+    scene.add(sphere2);
+    let torus = createTorus(1, 0.5, 16, 100, mat.toon);
+    torus.position.set(0, -5, 0);
+    torus.rotateX(three.Math.degToRad(90));
+    scene.add(torus);
+
+    let plane = createPlane(20, 20, 1, 1, floorMat);
+    plane.position.set(0, -5.5, 0);
+    plane.rotateX(three.Math.degToRad(-90));
+    scene.add(plane);
 
     /* ****** Adding lighting ****** */
-    let light = new three.PointLight(0xffff00);
-    light.position.set(10, 0, 25);
-    scene.add(light);
-    
+    let spotlightDown = new three.SpotLight(0xffff00);
+    spotlightDown.position.set(0, 3.5, 0);
+    spotlightDown.on = true;
+    scene.add(spotlightDown);
+
+    let spotlightUp = new three.SpotLight(0xffff00);
+    spotlightUp.position.set(0, -0.5, 0);
+    scene.add(spotlightUp);
+
+    let ambientLight = new three.AmbientLight(0x404040);
+    ambientLight.intensity = 0.5;
+    scene.add(ambientLight);
+
+    let dirLightAbove = new three.DirectionalLight(0xffff00);
+    dirLightAbove.intensity = 0.7;
+    dirLightAbove.position.set(-7, 10, 10);
+    scene.add(dirLightAbove);
+
     /* ****** Animating and rendering ****** */
     function animate() {
-        //requestAnimationFrame(animate);
+        requestAnimationFrame(animate);
         renderer.render( scene, camera);
-        cube.rotation.x += 0.01;
-        cube.rotation.y += 0.01;
+        matSphere.rotation.x += 0.01;
+        matSphere.rotation.z -= 0.01;
     }
+
+    // Add a simple event listener so when we click the left mouse button we turn off some of the light
+    document.addEventListener("click", function() {
+        if (spotlightDown.on) {
+            spotlightDown.intensity = 0
+            spotlightUp.intensity = 0;
+        } else {
+            spotlightDown.intensity = 1;
+            spotlightUp.intensity = 1;
+        }
+        spotlightDown.on = !spotlightDown.on;
+    });
     animate();
 
 </script>
